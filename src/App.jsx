@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { useChamados } from './hooks/useChamados'
+import { useToast } from './hooks/useToast'
 import ChamadoForm from './components/ChamadoForm'
 import ChamadoList from './components/ChamadoList'
 import KanbanBoard from './components/KanbanBoard'
 import Login from './components/Login'
 import GoogleMapsModal from './components/GoogleMapsModal'
+import ToastContainer from './components/ToastContainer'
+import ConfirmModal from './components/ConfirmModal'
 import { IconKanban, IconList, IconLogout, IconChevronDown, IconPlus, IconCheck } from './components/Icons'
-import { STATUS_OPTIONS, PRIORIDADE_OPTIONS } from './services/chamadoMockService'
+import { STATUS_OPTIONS, PRIORIDADE_OPTIONS, TEMPO_ESPERA_OPTIONS } from './services/chamadoMockService'
 
 // Error Boundary simples
 const ErrorBoundary = ({ children }) => {
@@ -49,6 +52,7 @@ const ErrorBoundary = ({ children }) => {
  */
 function App() {
   const { chamados, createChamado, updateChamado, markAsUrgent, cancelChamado } = useChamados()
+  const { toasts, success, error, warning, info, removeToast } = useToast()
   
   // Tratamento de erro básico
   if (!chamados) {
@@ -63,6 +67,7 @@ function App() {
     search: '',
     status: 'todos',
     prioridade: 'todos',
+    tempoEspera: 'todos',
   })
   
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -80,6 +85,7 @@ function App() {
   const [viewMode, setViewMode] = useState('kanban') // 'kanban' ou 'lista'
   const [showViewMenu, setShowViewMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, title: '', message: '', type: 'warning' })
   const viewMenuRef = useRef(null)
   const userMenuRef = useRef(null)
 
@@ -111,6 +117,7 @@ function App() {
 
   const handleCreateChamado = (chamadoData) => {
     createChamado(chamadoData)
+    success(`Chamado criado com sucesso para ${chamadoData.paciente}`)
     // Feedback visual - scroll suave para o novo chamado
     setTimeout(() => {
       document.getElementById('chamado-list')?.scrollIntoView({ 
@@ -150,22 +157,54 @@ function App() {
     if (newStatus === 'cancelado' && viewMode === 'lista') {
       const chamado = chamados.find(c => c.id === id)
       if (chamado) {
-        const confirmMessage = `Deseja realmente cancelar o chamado de ${chamado.paciente}?`
-        if (!confirm(confirmMessage)) {
-          return // Cancela a operação se o usuário não confirmar
-        }
+        setConfirmModal({
+          isOpen: true,
+          title: 'Cancelar Chamado',
+          message: `Deseja realmente cancelar o chamado de ${chamado.paciente}?`,
+          type: 'danger',
+          onConfirm: () => {
+            updateChamado(id, { status: newStatus })
+            success(`Status do chamado de ${chamado.paciente} alterado para Cancelado`)
+          }
+        })
+        return
       }
     }
+    const chamado = chamados.find(c => c.id === id)
     updateChamado(id, { status: newStatus })
+    if (chamado) {
+      const statusLabels = {
+        pendente: 'Triagem',
+        alocado: 'Alocado',
+        em_deslocamento: 'Em Deslocamento',
+        concluido: 'Concluído',
+        cancelado: 'Cancelado'
+      }
+      success(`Status do chamado de ${chamado.paciente} alterado para ${statusLabels[newStatus] || newStatus}`)
+    }
   }
 
   const handleMarkUrgent = (id) => {
+    const chamado = chamados.find(c => c.id === id)
     markAsUrgent(id)
+    if (chamado) {
+      warning(`Chamado de ${chamado.paciente} marcado como urgente`)
+    }
   }
 
   const handleCancel = (id) => {
-    if (confirm('Deseja realmente cancelar este chamado?')) {
-      cancelChamado(id)
+    const chamado = chamados.find(c => c.id === id)
+    if (chamado) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Cancelar Chamado',
+        message: `Deseja realmente cancelar o chamado de ${chamado.paciente}?`,
+        type: 'danger',
+        onConfirm: () => {
+          cancelChamado(id)
+          error(`Chamado de ${chamado.paciente} foi cancelado`)
+        }
+      })
     }
   }
 
@@ -297,7 +336,7 @@ function App() {
               )}
             </div>
 
-            {/* Centro: Filtros Status e Prioridade */}
+            {/* Centro: Filtros Status, Prioridade e Tempo de Espera */}
             <div className="flex items-center gap-3 flex-1 justify-center min-w-0">
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-gray-700 whitespace-nowrap hidden md:inline">Status:</label>
@@ -321,6 +360,20 @@ function App() {
                   className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
                 >
                   {PRIORIDADE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-700 whitespace-nowrap hidden md:inline">Tempo:</label>
+                <select
+                  value={filters.tempoEspera}
+                  onChange={(e) => handleFilterChange('tempoEspera', e.target.value)}
+                  className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[130px]"
+                >
+                  {TEMPO_ESPERA_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -353,7 +406,24 @@ function App() {
             {viewMode === 'kanban' ? (
               <KanbanBoard
                 chamados={chamados}
-                onChangeStatus={handleChangeStatus}
+                onChangeStatus={(id, newStatus) => {
+                  if (newStatus === 'cancelado') {
+                    const chamado = chamados.find(c => c.id === id)
+                    if (chamado) {
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'Cancelar Chamado',
+                        message: `Deseja realmente cancelar o chamado de ${chamado.paciente}?`,
+                        type: 'danger',
+                        onConfirm: () => {
+                          handleChangeStatus(id, newStatus)
+                        }
+                      })
+                      return
+                    }
+                  }
+                  handleChangeStatus(id, newStatus)
+                }}
                 onMarkUrgent={handleMarkUrgent}
                 onCancel={handleCancel}
                 onEdit={handleEditChamado}
@@ -381,7 +451,12 @@ function App() {
         onClose={handleCloseModal}
         onCreateChamado={handleCreateChamado}
         chamadoEdicao={chamadoEdicao}
-        onUpdateChamado={updateChamado}
+        onUpdateChamado={(id, updates) => {
+          updateChamado(id, updates)
+          if (chamadoEdicao) {
+            success(`Chamado de ${chamadoEdicao.paciente} atualizado com sucesso`)
+          }
+        }}
       />
 
       {/* Modal do Google Maps */}
@@ -389,6 +464,21 @@ function App() {
         isOpen={isMapsModalOpen}
         onClose={handleCloseMaps}
         endereco={mapsEndereco}
+      />
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      {/* Modal de Confirmação */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, onConfirm: null, title: '', message: '', type: 'warning' })}
+        onConfirm={confirmModal.onConfirm || (() => {})}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Confirmar"
+        cancelText="Cancelar"
       />
     </div>
     </ErrorBoundary>

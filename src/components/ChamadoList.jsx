@@ -36,6 +36,25 @@ const ChamadoList = ({
         return false
       }
 
+      // Filtro de tempo de espera
+      if (filters.tempoEspera && filters.tempoEspera !== 'todos') {
+        const tempoEspera = chamado.tempoEspera || 0
+        switch (filters.tempoEspera) {
+          case '0-5':
+            if (tempoEspera > 5) return false
+            break
+          case '5-15':
+            if (tempoEspera <= 5 || tempoEspera > 15) return false
+            break
+          case '15-30':
+            if (tempoEspera <= 15 || tempoEspera > 30) return false
+            break
+          case '30+':
+            if (tempoEspera <= 30) return false
+            break
+        }
+      }
+
       return true
     })
   }, [chamados, filters])

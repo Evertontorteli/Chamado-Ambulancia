@@ -15,19 +15,9 @@ const KanbanBoard = ({
   onOpenMaps,
   filters
 }) => {
-  // Wrapper para onChangeStatus que adiciona confirmação para cancelado
+  // Wrapper para onChangeStatus - a confirmação agora é feita no App.jsx
   const handleStatusChangeWithConfirm = (id, newStatus) => {
-    if (newStatus === 'cancelado') {
-      const chamado = chamados.find(c => c.id === id)
-      if (chamado) {
-        const confirmMessage = `Deseja realmente cancelar o chamado de ${chamado.paciente}?`
-        if (confirm(confirmMessage)) {
-          onChangeStatus(id, newStatus)
-        }
-      }
-    } else {
-      onChangeStatus(id, newStatus)
-    }
+    onChangeStatus(id, newStatus)
   }
   // Colunas padrão baseadas nos status
   const defaultColumns = [
@@ -117,6 +107,25 @@ const KanbanBoard = ({
       // Filtro de prioridade
       if (filters.prioridade !== 'todos' && chamado.prioridade !== filters.prioridade) {
         return false
+      }
+
+      // Filtro de tempo de espera
+      if (filters.tempoEspera && filters.tempoEspera !== 'todos') {
+        const tempoEspera = chamado.tempoEspera || 0
+        switch (filters.tempoEspera) {
+          case '0-5':
+            if (tempoEspera > 5) return false
+            break
+          case '5-15':
+            if (tempoEspera <= 5 || tempoEspera > 15) return false
+            break
+          case '15-30':
+            if (tempoEspera <= 15 || tempoEspera > 30) return false
+            break
+          case '30+':
+            if (tempoEspera <= 30) return false
+            break
+        }
       }
 
       return true

@@ -74,6 +74,15 @@ export const PRIORIDADE_OPTIONS = [
   { value: 'baixa', label: 'Baixa' },
 ]
 
+// Opções de tempo de espera
+export const TEMPO_ESPERA_OPTIONS = [
+  { value: 'todos', label: 'Todos os Tempos' },
+  { value: '0-5', label: '0-5 min' },
+  { value: '5-15', label: '5-15 min' },
+  { value: '15-30', label: '15-30 min' },
+  { value: '30+', label: '30+ min' },
+]
+
 // Função para obter cor da prioridade
 export const getPrioridadeColor = (prioridade) => {
   const colors = {
