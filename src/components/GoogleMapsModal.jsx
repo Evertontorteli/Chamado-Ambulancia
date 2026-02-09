@@ -12,11 +12,9 @@ const GoogleMapsModal = ({ isOpen, onClose, endereco }) => {
   return (
     <div 
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
     >
       <div 
         className="bg-white rounded-lg max-w-4xl w-full h-[80vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header do Modal */}
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
