@@ -1,5 +1,5 @@
 import { getPrioridadeColor, getStatusColor, getStatusLabel } from '../services/chamadoMockService'
-import { IconLocation, IconHospital } from './Icons'
+import { IconLocation, IconHospital, IconWhatsApp } from './Icons'
 
 /**
  * Componente de card para exibir um chamado no Kanban
@@ -49,6 +49,14 @@ const KanbanCard = ({
     }
   }
 
+  const handleWhatsAppClick = (e) => {
+    e.stopPropagation() // Impede que abra o modal de edição
+    // Remove caracteres não numéricos do telefone
+    const phoneNumber = chamado.telefone.replace(/\D/g, '')
+    // Abre WhatsApp com o número formatado
+    window.open(`https://wa.me/${phoneNumber}`, '_blank')
+  }
+
   return (
     <div
       id={`chamado-${chamado.id}`}
@@ -58,7 +66,17 @@ const KanbanCard = ({
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-sm text-gray-800 truncate">{chamado.paciente}</h3>
-          <p className="text-xs text-gray-600">{chamado.telefone}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs text-gray-600">{chamado.telefone}</p>
+            <button
+              onClick={handleWhatsAppClick}
+              className="flex-shrink-0 text-green-600 hover:text-green-700 transition-colors"
+              title="Abrir WhatsApp"
+              aria-label="Abrir WhatsApp"
+            >
+              <IconWhatsApp className="w-4 h-4" />
+            </button>
+          </div>
         </div>
         <div className="flex gap-1 flex-shrink-0">
           <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${prioridadeColor}`}>
