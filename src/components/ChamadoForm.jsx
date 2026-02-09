@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { IconClose, IconSearch } from './Icons'
 
 /**
@@ -20,6 +20,7 @@ const ChamadoForm = ({ isOpen, onClose, onCreateChamado, chamadoEdicao, onUpdate
   const [cepDestino, setCepDestino] = useState('')
   const [loadingCepOrigem, setLoadingCepOrigem] = useState(false)
   const [loadingCepDestino, setLoadingCepDestino] = useState(false)
+  const [initialFormData, setInitialFormData] = useState(null)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -100,17 +101,47 @@ const ChamadoForm = ({ isOpen, onClose, onCreateChamado, chamadoEdicao, onUpdate
     return Object.keys(newErrors).length === 0
   }
 
+  // Função para verificar se houve modificações
+  const hasChanges = () => {
+    if (!initialFormData) return false
+    
+    return (
+      formData.paciente !== initialFormData.paciente ||
+      formData.telefone !== initialFormData.telefone ||
+      formData.endereco !== initialFormData.endereco ||
+      formData.destino !== initialFormData.destino ||
+      formData.prioridade !== initialFormData.prioridade ||
+      formData.observacoes !== initialFormData.observacoes
+    )
+  }
+
   // Carrega dados do chamado quando está em modo de edição
   useEffect(() => {
     if (isOpen && chamadoEdicao) {
-      setFormData({
+      const initialData = {
         paciente: chamadoEdicao.paciente || '',
         telefone: chamadoEdicao.telefone || '',
         endereco: chamadoEdicao.endereco || '',
         destino: chamadoEdicao.destino || '',
         prioridade: chamadoEdicao.prioridade || 'media',
         observacoes: chamadoEdicao.observacoes || '',
-      })
+      }
+      setFormData(initialData)
+      setInitialFormData(initialData)
+      setCepOrigem('')
+      setCepDestino('')
+    } else if (isOpen && !chamadoEdicao) {
+      // Modo criação - inicializa com valores vazios
+      const initialData = {
+        paciente: '',
+        telefone: '',
+        endereco: '',
+        destino: '',
+        prioridade: 'media',
+        observacoes: '',
+      }
+      setFormData(initialData)
+      setInitialFormData(initialData)
       setCepOrigem('')
       setCepDestino('')
     } else if (!isOpen) {
@@ -123,12 +154,56 @@ const ChamadoForm = ({ isOpen, onClose, onCreateChamado, chamadoEdicao, onUpdate
         prioridade: 'media',
         observacoes: '',
       })
+      setInitialFormData(null)
       setErrors({})
       setIsSubmitting(false)
       setCepOrigem('')
       setCepDestino('')
     }
   }, [isOpen, chamadoEdicao])
+
+  const handleCloseWithConfirmation = useCallback(() => {
+    if (isSubmitting) return
+
+    // Verifica se houve modificações
+    const hasModifications = initialFormData && (
+      formData.paciente !== initialFormData.paciente ||
+      formData.telefone !== initialFormData.telefone ||
+      formData.endereco !== initialFormData.endereco ||
+      formData.destino !== initialFormData.destino ||
+      formData.prioridade !== initialFormData.prioridade ||
+      formData.observacoes !== initialFormData.observacoes
+    )
+
+    // Se houver modificações, pede confirmação
+    if (hasModifications) {
+      const confirmar = window.confirm(
+        'Você tem alterações não salvas. Deseja realmente fechar sem salvar?'
+      )
+      if (confirmar) {
+        onClose()
+      }
+    } else {
+      // Se não houver modificações, fecha diretamente
+      onClose()
+    }
+  }, [isSubmitting, formData, initialFormData, onClose])
+
+  // Listener para tecla ESC
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        handleCloseWithConfirmation()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, isSubmitting, handleCloseWithConfirmation])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -152,7 +227,7 @@ const ChamadoForm = ({ isOpen, onClose, onCreateChamado, chamadoEdicao, onUpdate
 
   const handleClose = () => {
     if (!isSubmitting) {
-      onClose()
+      handleCloseWithConfirmation()
     }
   }
 
