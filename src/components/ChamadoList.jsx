@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import ChamadoCard from './ChamadoCard'
+import { calcularTempoEspera } from '../services/chamadoMockService'
 
 /**
  * Componente de lista de chamados com filtros
@@ -14,6 +15,18 @@ const ChamadoList = ({
   onOpenMaps,
   filters
 }) => {
+  // Estado para forçar atualização dos filtros quando o tempo mudar
+  const [updateKey, setUpdateKey] = useState(0)
+
+  // Atualiza a cada minuto para recalcular os filtros
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setUpdateKey(prev => prev + 1)
+    }, 60000) // Atualiza a cada minuto
+
+    return () => clearInterval(interval)
+  }, [])
+
   // Filtra chamados baseado nos filtros
   const filteredChamados = useMemo(() => {
     return chamados.filter((chamado) => {
@@ -36,9 +49,9 @@ const ChamadoList = ({
         return false
       }
 
-      // Filtro de tempo de espera
+      // Filtro de tempo de espera (calculado dinamicamente)
       if (filters.tempoEspera && filters.tempoEspera !== 'todos') {
-        const tempoEspera = chamado.tempoEspera || 0
+        const tempoEspera = calcularTempoEspera(chamado.criadoEm)
         switch (filters.tempoEspera) {
           case '0-5':
             if (tempoEspera > 5) return false
@@ -57,7 +70,7 @@ const ChamadoList = ({
 
       return true
     })
-  }, [chamados, filters])
+  }, [chamados, filters, updateKey])
 
   return (
     <div id="chamado-list" className="h-full flex flex-col">

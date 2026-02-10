@@ -1,4 +1,5 @@
-import { getPrioridadeColor, getStatusColor, getStatusLabel } from '../services/chamadoMockService'
+import { useState, useEffect } from 'react'
+import { getPrioridadeColor, getStatusColor, getStatusLabel, calcularTempoEspera, formatarTempoEspera } from '../services/chamadoMockService'
 import { IconLocation, IconHospital, IconWhatsApp } from './Icons'
 
 /**
@@ -15,6 +16,16 @@ const KanbanCard = ({
 }) => {
   const prioridadeColor = getPrioridadeColor(chamado.prioridade)
   const statusColor = getStatusColor(chamado.status)
+  const [tempoEspera, setTempoEspera] = useState(() => calcularTempoEspera(chamado.criadoEm))
+
+  // Atualiza o tempo de espera a cada minuto
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTempoEspera(calcularTempoEspera(chamado.criadoEm))
+    }, 60000) // Atualiza a cada minuto
+
+    return () => clearInterval(interval)
+  }, [chamado.criadoEm])
 
   // Determina a cor da borda do card
   const getCardBorderColor = () => {
@@ -115,7 +126,7 @@ const KanbanCard = ({
           </button>
         )}
         <span className="text-xs text-gray-500 ml-auto">
-          {chamado.tempoEspera} min
+          {formatarTempoEspera(tempoEspera)}
         </span>
       </div>
     </div>

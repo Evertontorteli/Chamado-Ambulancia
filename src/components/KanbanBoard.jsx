@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import KanbanColumn from './KanbanColumn'
 import { IconPlus } from './Icons'
+import { calcularTempoEspera } from '../services/chamadoMockService'
 
 /**
  * Componente de board Kanban
@@ -81,6 +82,7 @@ const KanbanBoard = ({
   const draggedColumnIdRef = useRef(null) // Ref para armazenar ID da coluna sendo arrastada
   const [newColumnName, setNewColumnName] = useState('')
   const [showAddColumn, setShowAddColumn] = useState(false)
+  const [updateKey, setUpdateKey] = useState(0) // Para forçar atualização dos filtros
 
   // Salva colunas no localStorage
   useEffect(() => {
@@ -90,6 +92,15 @@ const KanbanBoard = ({
       console.error('Erro ao salvar colunas:', error)
     }
   }, [columns])
+
+  // Atualiza a cada minuto para recalcular os filtros
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setUpdateKey(prev => prev + 1)
+    }, 60000) // Atualiza a cada minuto
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Filtra chamados baseado nos filtros
   // Nota: O filtro de status não é aplicado aqui porque as colunas já representam os status
@@ -109,9 +120,9 @@ const KanbanBoard = ({
         return false
       }
 
-      // Filtro de tempo de espera
+      // Filtro de tempo de espera (calculado dinamicamente)
       if (filters.tempoEspera && filters.tempoEspera !== 'todos') {
-        const tempoEspera = chamado.tempoEspera || 0
+        const tempoEspera = calcularTempoEspera(chamado.criadoEm)
         switch (filters.tempoEspera) {
           case '0-5':
             if (tempoEspera > 5) return false
@@ -130,7 +141,7 @@ const KanbanBoard = ({
 
       return true
     })
-  }, [chamados, filters])
+  }, [chamados, filters, updateKey])
 
   const handleDragStart = (e, chamado) => {
     setDraggedChamado(chamado)

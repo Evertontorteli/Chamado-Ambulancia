@@ -52,7 +52,6 @@ export const useChamados = () => {
       ...chamadoData,
       id: Date.now(),
       status: 'pendente',
-      tempoEspera: 0,
       coordenadas,
       criadoEm: new Date().toISOString(),
     }

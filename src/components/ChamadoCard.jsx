@@ -1,4 +1,5 @@
-import { getPrioridadeColor, getStatusColor, getStatusLabel } from '../services/chamadoMockService'
+import { useState, useEffect } from 'react'
+import { getPrioridadeColor, getStatusColor, getStatusLabel, calcularTempoEspera, formatarTempoEspera } from '../services/chamadoMockService'
 import { IconLocation, IconHospital, IconWhatsApp } from './Icons'
 
 /**
@@ -15,6 +16,16 @@ const ChamadoCard = ({
 }) => {
   const prioridadeColor = getPrioridadeColor(chamado.prioridade)
   const statusColor = getStatusColor(chamado.status)
+  const [tempoEspera, setTempoEspera] = useState(() => calcularTempoEspera(chamado.criadoEm))
+
+  // Atualiza o tempo de espera a cada minuto
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTempoEspera(calcularTempoEspera(chamado.criadoEm))
+    }, 60000) // Atualiza a cada minuto
+
+    return () => clearInterval(interval)
+  }, [chamado.criadoEm])
 
   const handleCardClick = () => {
     if (onEdit) {
@@ -97,7 +108,7 @@ const ChamadoCard = ({
 
       <div className="flex flex-wrap justify-between items-center gap-2 pt-2 border-t">
         <span className="text-xs text-gray-500">
-          Tempo de espera: {chamado.tempoEspera} min
+          Tempo de espera: {formatarTempoEspera(tempoEspera)}
         </span>
         <div className="flex flex-wrap gap-2">
           {chamado.status !== 'cancelado' && onCancel && (

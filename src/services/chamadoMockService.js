@@ -12,6 +12,53 @@ export const mockGeocode = (address) => {
   return { lat, lng }
 }
 
+// Calcula o tempo de espera em minutos baseado na data de criação
+export const calcularTempoEspera = (criadoEm) => {
+  if (!criadoEm) return 0
+  const agora = new Date()
+  const criado = new Date(criadoEm)
+  const diferencaMs = agora - criado
+  const diferencaMinutos = Math.floor(diferencaMs / (1000 * 60))
+  return Math.max(0, diferencaMinutos) // Retorna 0 se for negativo
+}
+
+// Formata o tempo de espera para exibição (minutos, horas ou dias)
+export const formatarTempoEspera = (minutos) => {
+  // Menos de 60 minutos: exibe em minutos
+  if (minutos < 60) {
+    return `${minutos} min`
+  }
+  
+  const horas = Math.floor(minutos / 60)
+  const minutosRestantes = minutos % 60
+  
+  // Menos de 24 horas: exibe em horas
+  if (horas < 24) {
+    if (minutosRestantes === 0) {
+      return `${horas}h`
+    }
+    return `${horas}h ${minutosRestantes}min`
+  }
+  
+  // 24 horas ou mais: exibe em dias
+  const dias = Math.floor(horas / 24)
+  const horasRestantes = horas % 24
+  
+  if (horasRestantes === 0 && minutosRestantes === 0) {
+    return `${dias}d`
+  }
+  
+  if (horasRestantes === 0) {
+    return `${dias}d ${minutosRestantes}min`
+  }
+  
+  if (minutosRestantes === 0) {
+    return `${dias}d ${horasRestantes}h`
+  }
+  
+  return `${dias}d ${horasRestantes}h ${minutosRestantes}min`
+}
+
 // Dados iniciais de chamados para demonstração
 export const initialChamados = [
   {
@@ -23,7 +70,6 @@ export const initialChamados = [
     prioridade: 'urgente',
     status: 'pendente',
     observacoes: 'Paciente com dificuldade respiratória',
-    tempoEspera: 5,
     coordenadas: { lat: -20.2689, lng: -50.5458 },
     criadoEm: new Date(Date.now() - 5 * 60000).toISOString(),
   },
@@ -36,7 +82,6 @@ export const initialChamados = [
     prioridade: 'alta',
     status: 'alocado',
     observacoes: 'Transporte de rotina',
-    tempoEspera: 15,
     coordenadas: { lat: -20.2750, lng: -50.5500 },
     criadoEm: new Date(Date.now() - 15 * 60000).toISOString(),
   },
@@ -49,7 +94,6 @@ export const initialChamados = [
     prioridade: 'media',
     status: 'em_deslocamento',
     observacoes: '',
-    tempoEspera: 8,
     coordenadas: { lat: -20.2600, lng: -50.5400 },
     criadoEm: new Date(Date.now() - 8 * 60000).toISOString(),
   },
